@@ -5,7 +5,11 @@ Aplicativo em Flutter que monta a melhor rota do dia a partir de uma lista de en
 Projeto Integrado de Desenvolvimento Mobile, Análise e Desenvolvimento de Sistemas, UNIFEOB.
 Beneficiário: G Reis Negócios (HOBRATEC), Aguaí-SP.
 
-Alunos: Glauber Mariano Lellis Junior, Eduarda Celina Ezequiel Maltempe e João Gabriel da Silva.
+Alunos:
+
+- Glauber Mariano Lellis Junior ([@niceschemes](https://github.com/niceschemes))
+- Eduarda Celina Ezequiel Maltempe ([@dudamaltempe](https://github.com/dudamaltempe))
+- João Gabriel da Silva ([@joaosilva-prog](https://github.com/joaosilva-prog))
 
 ## O que o aplicativo faz
 
