@@ -51,19 +51,25 @@ void main() {
     await binding.takeScreenshot('01-home-vazia');
 
     await tester.tap(find.text('Adicionar manual'));
-    await waitFor(tester, () => find.text('Aguaí').evaluate().isNotEmpty, seconds: 30);
+    await wait(tester, 2);
+    await tester.enterText(find.widgetWithText(TextField, 'Cidade padrão'), 'Aguaí');
     await wait(tester, 1);
     await binding.takeScreenshot('02-adicionar-manual');
 
-    await tester.enterText(find.byType(TextField).at(1), _paradas.join('\n'));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Digite ou cole os endereços'),
+      _paradas.join('\n'),
+    );
     FocusManager.instance.primaryFocus?.unfocus();
     await wait(tester, 1);
+    await tester.ensureVisible(find.text('Ler paradas'));
     await tester.tap(find.text('Ler paradas'));
-    await wait(tester, 2);
+    await waitFor(tester, () => find.text('10 paradas prontas').evaluate().isNotEmpty, seconds: 10);
+    await wait(tester, 1);
     await binding.takeScreenshot('03-paradas-lidas');
 
-    final adicionar = find.textContaining('Adicionar 10');
-    await tester.ensureVisible(adicionar);
+    final adicionar = find.text('Adicionar 10 paradas');
+    await tester.scrollUntilVisible(adicionar, 400, scrollable: find.byType(Scrollable).first);
     await wait(tester, 1);
     await tester.tap(adicionar);
     await waitFor(
