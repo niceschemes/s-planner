@@ -28,10 +28,7 @@ jobs:
       - name: App de iPhone (sem assinatura)
         run: flutter build ios --release --no-codesign
 
-      - name: App para o simulador
-        run: flutter build ios --simulator --debug
-
-      - name: Abrir no iPhone simulado
+      - name: Usar as telas no iPhone simulado
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
@@ -42,14 +39,7 @@ jobs:
           echo "Simulador: $UDID"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
-          xcrun simctl privacy "$UDID" grant location br.curso.app.curso || true
-          xcrun simctl location "$UDID" set -22.0620,-46.9655 || true
-          xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
-          xcrun simctl launch "$UDID" br.curso.app.curso
-          sleep 25
-          mkdir -p prints
-          xcrun simctl io "$UDID" screenshot prints/iphone-home.png
-          xcrun simctl spawn "$UDID" launchctl list | grep -q br.curso.app.curso && echo "App aberto e rodando"
+          flutter drive --driver=test_driver/integration_test.dart --target=integration_test/demo_test.dart -d "$UDID"
 
       - uses: actions/upload-artifact@v4
         if: always()
