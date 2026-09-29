@@ -1,6 +1,6 @@
 # S Planner
 
-Aplicativo em Flutter que monta a melhor rota a partir de uma lista de endereços.
+Aplicativo em Flutter que monta a melhor rota do dia a partir de uma lista de endereços.
 
 Projeto Integrado de Desenvolvimento Mobile, Análise e Desenvolvimento de Sistemas, UNIFEOB.
 Beneficiário: Leandra de Souza Piani, entrega de doces (revenda Fazenda), Aguaí-SP. CNPJ 69.251.628/0001-66.
