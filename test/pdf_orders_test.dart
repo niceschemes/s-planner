@@ -86,20 +86,20 @@ ligar antes
 
   test('lê as ruas de um PDF solto e ignora frase que não é endereço', () {
     const raw = '''
-FICHAS SOLTAS - TESTE UPA / AGUAI
-Dados ficticios para testar leitura de problema + endereco.
-Fila travada na triagem
+ROMANEIO DE DOCES - ENTREGAS DO DIA
+Dados ficticios para testar leitura de pedido + endereco.
+Cliente pediu para ligar antes de sair
 RUA XV DE NOVEMBRO, 447 - CENTRO - AGUAI SP
-perto da farmacia / numero pode estar borrado
+perto da padaria / numero pode estar borrado
 RUA 7 DE SETEMBRO, 256 - CENTRO - AGUAI SP
 esquina com Major Braga / rua tambem aparece como Sete de Setembro
 RUA CARLOS GOMES, 606 - CENTRO - AGUAI SP
-RUA VALINS 746 CENTRO AGUAI - SP | CRAS? problema: maca sem roda
-RUA JOAQUIM JOSE 187 CENTRO AGUAI SP / chamado perdido: radio falhando
-RUA OSORIO BARBOSA S/N JARDIM CENTER CITY AGUAI-SP // UBS Center City // endereco solto
-RUA MIGUEL ANGELO 791 VILA BRAGA AGUAI SP - observacao escrita torta: porta emperrada
+RUA VALINS 746 CENTRO AGUAI - SP | recado: bolo pode amassar
+RUA JOAQUIM JOSE 187 CENTRO AGUAI SP / entregar na mao, nao deixar na portaria
+RUA OSORIO BARBOSA S/N JARDIM CENTER CITY AGUAI-SP // comentario solto
+RUA MIGUEL ANGELO 791 VILA BRAGA AGUAI SP - observacao escrita torta: portao azul
 ''';
-    final stops = ordersFromDocumentText(raw, fileName: 'teste_upa_aguai_enderecos.pdf', defaultCity: 'Aguaí');
+    final stops = ordersFromDocumentText(raw, fileName: 'entregas-aguai.pdf', defaultCity: 'Aguaí');
     final addresses = stops.map((stop) => stop.address.toLowerCase()).toList();
     expect(addresses, [
       contains('xv de novembro'),
@@ -118,7 +118,7 @@ RUA MIGUEL ANGELO 791 VILA BRAGA AGUAI SP - observacao escrita torta: porta empe
 
   test('tira o endereço escondido na frase e ignora o comentário', () {
     const raw = '''
-FICHAS SOLTAS - TESTE UPA / AGUAI
+ROMANEIO DE DOCES - ENTREGAS DO DIA
 a familia citou XV de Novembro 447, Centro, AguaI, mas no papel veio dividido.
 rua tambem aparece como R. 7 de Setembro
 Registro: Sete de Setembro, numero 256, Centro - AguaI SP, talvez entrada lateral.
@@ -132,7 +132,7 @@ No canto: Av Olinda Silveira Cruz Braga 215 Parque Interlagos AguaI, talvez ende
 Av Olinda Silveira Cruz Braga 215 apareceu no meio da observacao
 Tancredo Neves 23 Centro AguaI SP, sem indicar se e praca ou rua.
 ''';
-    final stops = ordersFromDocumentText(raw, fileName: 'teste_upa_aguai_enderecos.pdf', defaultCity: 'Aguaí');
+    final stops = ordersFromDocumentText(raw, fileName: 'entregas-aguai.pdf', defaultCity: 'Aguaí');
     final addresses = stops.map((stop) => stop.address.toLowerCase()).toList();
     expect(addresses.any((item) => item.contains('xv de novembro') && item.contains('447')), isTrue);
     expect(addresses.any((item) => item.contains('sete de setembro') && item.contains('256')), isTrue);

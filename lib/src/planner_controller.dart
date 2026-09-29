@@ -347,6 +347,17 @@ class PlannerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearAddresses() {
+    today.visits = [];
+    today.closed = false;
+    today.reason = 'Cole ou adicione as paradas.';
+    selectedId = null;
+    impactMessage = null;
+    tripStarted = false;
+    showPlan = false;
+    notifyListeners();
+  }
+
   Future<void> useCurrentOrigin() async {
     today.origin = await _here();
     originDirty = false;

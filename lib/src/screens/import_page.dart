@@ -30,10 +30,10 @@ class ImportPage extends StatefulWidget {
 
 class _DraftEditors {
   _DraftEditors(this.draft)
-      : client = TextEditingController(text: draft.client),
-        address = TextEditingController(text: draft.address),
-        phone = TextEditingController(text: draft.phone),
-        note = TextEditingController(text: draft.note);
+    : client = TextEditingController(text: draft.client),
+      address = TextEditingController(text: draft.address),
+      phone = TextEditingController(text: draft.phone),
+      note = TextEditingController(text: draft.note);
 
   final DraftStop draft;
   final TextEditingController client;
@@ -66,6 +66,8 @@ class _ImportPageState extends State<ImportPage> {
   bool _reading = false;
   bool _planning = false;
   bool _cityTouched = false;
+  int _checked = 0;
+  int _checking = 0;
 
   @override
   void didChangeDependencies() {
@@ -124,7 +126,11 @@ class _ImportPageState extends State<ImportPage> {
           );
           continue;
         }
-        final drafts = ordersFromDocumentText(text, fileName: file.name, defaultCity: _city.text);
+        final drafts = ordersFromDocumentText(
+          text,
+          fileName: file.name,
+          defaultCity: _city.text,
+        );
         if (!mounted) return;
         final controller = PlannerScope.of(context);
         for (final draft in drafts) {
@@ -150,7 +156,9 @@ class _ImportPageState extends State<ImportPage> {
         _rows.addAll(editors);
         _docs.add(_DocumentItem(file.name, editors, null));
       } catch (_) {
-        _docs.add(_DocumentItem(file.name, const [], 'Não consegui abrir este PDF.'));
+        _docs.add(
+          _DocumentItem(file.name, const [], 'Não consegui abrir este PDF.'),
+        );
       }
     }
     flagDuplicateDrafts([
@@ -170,61 +178,90 @@ class _ImportPageState extends State<ImportPage> {
   void _confirm() {
     final messenger = ScaffoldMessenger.of(context);
     final controller = PlannerScope.of(context);
-    final fromDocs = _docs.isNotEmpty;
-    setState(() => _planning = true);
+    final navigator = Navigator.of(context);
+    final replace = _docs.isNotEmpty || widget.replace;
+    final rows =
+        <
+          ({
+            DraftStop draft,
+            String client,
+            String phone,
+            String note,
+            String address,
+          })
+        >[
+          for (final row in _rows)
+            if (!row.removed)
+              (
+                draft: row.draft,
+                client: row.client.text.trim(),
+                phone: row.phone.text.trim(),
+                note: row.note.text.trim(),
+                address: row.address.text.trim(),
+              ),
+        ];
+    setState(() {
+      _planning = true;
+      _checked = 0;
+      _checking = rows.length;
+    });
+    // Sair da tela no meio da conferência não pode perder as paradas: o trabalho termina e cai na Home.
     () async {
       final drafts = <DraftStop>[];
       try {
-        for (final row in _rows) {
-          if (row.removed) continue;
-          row.draft.client = row.client.text.trim().isEmpty ? 'Sem nome' : row.client.text.trim();
-          row.draft.phone = row.phone.text.trim();
-          row.draft.note = row.note.text.trim();
-          final address = row.address.text.trim();
-          final changed = address != row.draft.address;
-          row.draft.address = address;
+        for (final row in rows) {
+          final draft = row.draft;
+          draft.client = row.client.isEmpty ? 'Sem nome' : row.client;
+          draft.phone = row.phone;
+          draft.note = row.note;
+          final address = row.address;
+          final changed = address != draft.address;
+          draft.address = address;
           if (address.isEmpty) {
-            row.draft.invalid = true;
-            row.draft.lat = null;
-            row.draft.lng = null;
-          } else if (changed || (row.draft.lat == null && !row.draft.notFound)) {
-            final place = await controller.confirmStop(address);
-            if (!mounted) return;
-            row.draft.invalid = false;
+            draft.invalid = true;
+            draft.lat = null;
+            draft.lng = null;
+          } else if (changed || (draft.lat == null && !draft.notFound)) {
+            final place = await controller
+                .confirmStop(address)
+                .catchError((Object _) => null);
+            draft.invalid = false;
             if (place == null) {
-              row.draft.lat = null;
-              row.draft.lng = null;
-              row.draft.notFound = true;
-              row.draft.addressUncertain = true;
+              draft.lat = null;
+              draft.lng = null;
+              draft.notFound = true;
+              draft.addressUncertain = true;
             } else {
-              row.draft.lat = place.latitude;
-              row.draft.lng = place.longitude;
-              row.draft.notFound = false;
-              row.draft.addressUncertain = false;
-              row.draft.incomplete = false;
+              draft.lat = place.latitude;
+              draft.lng = place.longitude;
+              draft.notFound = false;
+              draft.addressUncertain = false;
+              draft.incomplete = false;
             }
           }
-          drafts.add(row.draft);
+          drafts.add(draft);
+          if (mounted) setState(() => _checked++);
         }
         final kept = drafts.where((draft) => !draft.invalid).toList();
         if (kept.isEmpty) {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Nenhuma parada com endereço para adicionar.')),
+            const SnackBar(
+              content: Text('Nenhuma parada com endereço para adicionar.'),
+            ),
           );
           return;
         }
         final missed = kept.where((draft) => draft.lat == null).length;
-        await controller.planImported(drafts, replace: fromDocs || widget.replace);
-        if (!mounted) return;
-        Navigator.pop(context);
+        await controller.planImported(drafts, replace: replace);
+        if (mounted) navigator.pop();
         messenger.showSnackBar(
           SnackBar(
             content: Text(
               missed == 0
                   ? '${kept.length} paradas na rota.'
                   : missed == 1
-                      ? '${kept.length} paradas na rota. 1 endereço não foi localizado no mapa. Confira em amarelo.'
-                      : '${kept.length} paradas na rota. $missed endereços não foram localizados no mapa. Confira em amarelo.',
+                  ? '${kept.length} paradas na rota. 1 endereço não foi localizado no mapa. Confira em amarelo.'
+                  : '${kept.length} paradas na rota. $missed endereços não foram localizados no mapa. Confira em amarelo.',
             ),
           ),
         );
@@ -236,8 +273,18 @@ class _ImportPageState extends State<ImportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final active = _rows.where((row) => !row.removed && !row.draft.invalid).length;
-    final uncertain = _rows.where((row) => !row.removed && (row.draft.incomplete || row.draft.duplicate || row.draft.clientUncertain)).length;
+    final active = _rows
+        .where((row) => !row.removed && !row.draft.invalid)
+        .length;
+    final uncertain = _rows
+        .where(
+          (row) =>
+              !row.removed &&
+              (row.draft.incomplete ||
+                  row.draft.duplicate ||
+                  row.draft.clientUncertain),
+        )
+        .length;
     final manual = <Widget>[
       Text(
         widget.manualFirst ? 'Endereços na mão' : 'Ou digite os endereços',
@@ -266,21 +313,33 @@ class _ImportPageState extends State<ImportPage> {
       if (_rows.isNotEmpty) ...[
         const SizedBox(height: 18),
         Text(
-          uncertain == 0 ? '$active paradas prontas' : '$uncertain para conferir',
+          uncertain == 0
+              ? '$active paradas prontas'
+              : '$uncertain para conferir',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         for (final row in _rows)
-          if (!row.removed) _Preview(row: row, onChanged: () => setState(() {})),
+          if (!row.removed)
+            _Preview(row: row, onChanged: () => setState(() {})),
         const SizedBox(height: 12),
         FilledButton(
           onPressed: active == 0 || _planning ? null : _confirm,
-          child: Text(_docs.isNotEmpty ? 'Planejar $active pedidos' : 'Adicionar $active paradas'),
+          child: Text(
+            _planning
+                ? 'Conferindo no mapa $_checked de $_checking'
+                : _docs.isNotEmpty
+                ? 'Planejar $active pedidos'
+                : 'Adicionar $active paradas',
+          ),
         ),
       ],
     ];
     final pdf = <Widget>[
-      const Text('Documentação dos pedidos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      const Text(
+        'Documentação dos pedidos',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
       const SizedBox(height: 4),
       const Text(
         'Cada PDF é um pedido. O app procura o campo de endereço e monta a sequência.',
@@ -290,35 +349,81 @@ class _ImportPageState extends State<ImportPage> {
       OutlinedButton.icon(
         onPressed: _reading || _planning ? null : _pickPdfs,
         icon: _reading
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : const Icon(Icons.upload_file, size: 18),
         label: Text(_reading ? 'Conferindo no mapa' : 'Adicionar PDFs'),
       ),
       if (_docs.isNotEmpty) ...[
         const SizedBox(height: 8),
-        for (final doc in _docs) _DocumentTile(doc: doc, onRemove: () => _removeDoc(doc)),
+        for (final doc in _docs)
+          _DocumentTile(doc: doc, onRemove: () => _removeDoc(doc)),
       ],
     ];
-    return Scaffold(
-      appBar: appPageBar(context, widget.manualFirst ? 'Adicionar manual' : 'Adicionar PDF'),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        children: [
-          TextField(
-            controller: _city,
-            decoration: const InputDecoration(
-              labelText: 'Cidade padrão',
-              helperText: 'Vem da sua localização. Endereço com outra cidade escrita mantém a cidade dele.',
-              helperMaxLines: 2,
+    final pending = active > 0 && !_planning;
+    return PopScope(
+      canPop: !pending,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _askBeforeLeaving(active);
+      },
+      child: Scaffold(
+        appBar: appPageBar(
+          context,
+          widget.manualFirst ? 'Adicionar manual' : 'Adicionar PDF',
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            TextField(
+              controller: _city,
+              decoration: const InputDecoration(
+                labelText: 'Cidade padrão',
+                helperText:
+                    'Vem da sua localização. Endereço com outra cidade escrita mantém a cidade dele.',
+                helperMaxLines: 2,
+              ),
             ),
+            const SizedBox(height: 16),
+            if (widget.manualFirst) ...manual else ...pdf,
+            const SizedBox(height: 16),
+            if (widget.manualFirst) ...pdf else ...manual,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _askBeforeLeaving(int count) async {
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Paradas não adicionadas'),
+        content: Text(
+          count == 1
+              ? 'Você leu 1 parada e ainda não adicionou na rota.'
+              : 'Você leu $count paradas e ainda não adicionou na rota.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Sair sem adicionar'),
           ),
-          const SizedBox(height: 16),
-          if (widget.manualFirst) ...manual else ...pdf,
-          const SizedBox(height: 16),
-          if (widget.manualFirst) ...pdf else ...manual,
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Adicionar'),
+          ),
         ],
       ),
     );
+    if (!mounted || add == null) return;
+    if (add) {
+      _confirm();
+    } else {
+      Navigator.pop(context);
+    }
   }
 }
 
@@ -330,8 +435,15 @@ class _DocumentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final address = doc.editors.map((editor) => editor.draft.address).where((item) => item.isNotEmpty).join(' · ');
-    final detail = doc.error ?? (address.isEmpty ? 'Endereço não encontrado. Preencha o campo abaixo.' : address);
+    final address = doc.editors
+        .map((editor) => editor.draft.address)
+        .where((item) => item.isNotEmpty)
+        .join(' · ');
+    final detail =
+        doc.error ??
+        (address.isEmpty
+            ? 'Endereço não encontrado. Preencha o campo abaixo.'
+            : address);
     final warn = doc.error != null || address.isEmpty;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -343,7 +455,11 @@ class _DocumentTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.description_outlined, size: 18, color: AppColors.mint),
+          const Icon(
+            Icons.description_outlined,
+            size: 18,
+            color: AppColors.mint,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -356,7 +472,10 @@ class _DocumentTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
-                Text(detail, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                Text(
+                  detail,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -379,7 +498,11 @@ class _Preview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final warn = row.draft.incomplete || row.draft.duplicate || row.draft.clientUncertain || row.draft.invalid;
+    final warn =
+        row.draft.incomplete ||
+        row.draft.duplicate ||
+        row.draft.clientUncertain ||
+        row.draft.invalid;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
@@ -408,13 +531,25 @@ class _Preview extends StatelessWidget {
               ),
             ],
           ),
-          TextField(controller: row.client, decoration: const InputDecoration(labelText: 'Cliente')),
+          TextField(
+            controller: row.client,
+            decoration: const InputDecoration(labelText: 'Cliente'),
+          ),
           const SizedBox(height: 6),
-          TextField(controller: row.address, decoration: const InputDecoration(labelText: 'Endereço')),
+          TextField(
+            controller: row.address,
+            decoration: const InputDecoration(labelText: 'Endereço'),
+          ),
           const SizedBox(height: 6),
-          TextField(controller: row.phone, decoration: const InputDecoration(labelText: 'Telefone')),
+          TextField(
+            controller: row.phone,
+            decoration: const InputDecoration(labelText: 'Telefone'),
+          ),
           const SizedBox(height: 6),
-          TextField(controller: row.note, decoration: const InputDecoration(labelText: 'Observação')),
+          TextField(
+            controller: row.note,
+            decoration: const InputDecoration(labelText: 'Observação'),
+          ),
           const SizedBox(height: 8),
         ],
       ),

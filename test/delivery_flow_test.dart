@@ -34,7 +34,7 @@ void main() {
       here: () async => gps,
     );
     controller.today.origin = const Place(
-      label: 'Rua Amelia Selber Milanez 298, Aguaí',
+      label: 'Rua Antonio Paula Silva 168, Aguaí',
       latitude: -22.07,
       longitude: -46.99,
     );
@@ -52,6 +52,20 @@ void main() {
     expect(day.origin.latitude, closeTo(-22.06, 0.02));
     expect(day.origin.longitude, closeTo(-46.98, 0.02));
     expect(day.visits, isEmpty);
+  });
+
+  test('limpar endereços tira as paradas e o traçado da rota do dia', () {
+    final controller = PlannerController(geocoder: Geocoder(gap: Duration.zero));
+    controller.today.visits = [
+      Visit(id: 'v1', client: 'Ana', address: 'Rua XV de Novembro 447', lat: -22.06, lng: -46.97),
+    ];
+    controller.tripStarted = true;
+
+    controller.clearAddresses();
+
+    expect(controller.today.visits, isEmpty);
+    expect(controller.tripStarted, isFalse);
+    expect(controller.today.reason, 'Cole ou adicione as paradas.');
   });
 
   test('a home pede parada só quando a rota está vazia', () {
