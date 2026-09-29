@@ -3,13 +3,13 @@
 Aplicativo em Flutter que monta a melhor rota a partir de uma lista de endereços.
 
 Projeto Integrado de Desenvolvimento Mobile, Análise e Desenvolvimento de Sistemas, UNIFEOB.
-Beneficiário: G Reis Negócios (HOBRATEC), Aguaí-SP.
+Beneficiário: Leandra de Souza Piani, entrega de doces (revenda Fazenda), Aguaí-SP. CNPJ 69.251.628/0001-66.
 
 Alunos:
 
-- Glauber Mariano Lellis Junior ([@niceschemes](https://github.com/niceschemes))
-- Eduarda Celina Ezequiel Maltempe ([@dudamaltempe](https://github.com/dudamaltempe))
-- João Gabriel da Silva ([@joaosilva-prog](https://github.com/joaosilva-prog))
+- Glauber Mariano Lellis Junior, RA 1012023200186 ([@niceschemes](https://github.com/niceschemes))
+- Eduarda Celina Ezequiel Maltempe, RA 24001738 ([@dudamaltempe](https://github.com/dudamaltempe))
+- João Gabriel da Silva, RA 25001142 ([@joaosilva-prog](https://github.com/joaosilva-prog))
 
 ## O que o aplicativo faz
 
