@@ -138,6 +138,30 @@ class _InstrumentState extends State<_Instrument>
     super.dispose();
   }
 
+  Future<void> _clearAddresses(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Limpar endereços'),
+        content: const Text(
+          'Todos os endereços e o traçado das ruas saem desta rota. O histórico continua salvo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Limpar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    PlannerScope.of(context).clearAddresses();
+  }
+
   @override
   Widget build(BuildContext context) {
     final night = routeMarkIsNight(DateTime.now());
@@ -259,6 +283,18 @@ class _InstrumentState extends State<_Instrument>
                     onPressed: widget.onOpenPlan,
                     child: const Text('Organizar sequência'),
                   ),
+                  if (widget.day.visits.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      key: const Key('clear-addresses'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(40),
+                        foregroundColor: const Color(0xFFB42318),
+                      ),
+                      onPressed: () => _clearAddresses(context),
+                      child: const Text('Limpar endereços'),
+                    ),
+                  ],
                 ],
               ),
             ),
