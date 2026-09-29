@@ -1,0 +1,48 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Dependências
+        run: flutter pub get
+
+      - name: Testes
+        run: flutter test
+
+      - name: App de iPhone (sem assinatura)
+        run: flutter build ios --release --no-codesign
+
+      - name: Usar as telas no iPhone simulado
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)['devices']
+          phones = [d for runtime, ds in data.items() if 'iOS' in runtime for d in ds if d['name'].startswith('iPhone')]
+          print(phones[-1]['udid'])
+          ")
+          echo "Simulador: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          flutter drive --driver=test_driver/integration_test.dart --target=integration_test/demo_test.dart -d "$UDID"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prints-iphone
+          path: prints/
